@@ -307,6 +307,7 @@ async def admin_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 if __name__ == "__main__":
     application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    logger.info("DEPLOY WORKED!")
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
