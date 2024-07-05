@@ -1,0 +1,9 @@
+﻿|1|2|3|4|5|6|7|8|9|10
+1|Clue 1|Clue 2|Clue 3|Clue 4|BREAK|Clue 5|Clue 6|Clue 7|Clue 8
+2|Clue 2|Clue 3|Clue 4|Clue 1|BREAK|Clue 6|Clue 7|Clue 8|Clue 5
+3|Clue 3|Clue 4|Clue 1|Clue 2|BREAK|Clue 7|Clue 8|Clue 5|Clue 6
+4|Clue 4|Clue 1|Clue 2|Clue 3|BREAK|Clue 8|Clue 5|Clue 6|Clue 7
+5|Clue 5|Clue 6|Clue 7|Clue 8|BREAK|Clue 1|Clue 2|Clue 3|Clue 4
+6|Clue 6|Clue 7|Clue 8|Clue 5|BREAK|Clue 2|Clue 3|Clue 4|Clue 1
+7|Clue 7|Clue 8|Clue 5|Clue 6|BREAK|Clue 3|Clue 4|Clue 1|Clue 2
+8|Clue 8|Clue 5|Clue 6|Clue 7|BREAK|Clue 4|Clue 1|Clue 2|Clue 3
