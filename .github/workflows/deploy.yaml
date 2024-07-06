@@ -20,4 +20,4 @@ jobs:
 
             - name: Deploy to EC2
               run: |
-                  ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} 'bash -s' < ./deploy.sh
+                  ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} 'bash -s' < ~/deploy.sh
