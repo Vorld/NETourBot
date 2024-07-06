@@ -1,7 +1,13 @@
 import logging
 from dotenv import load_dotenv
 import os
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram import (
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+    Update,
+    constants,
+    Location,
+)
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -87,7 +93,7 @@ async def confirm_team_number(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     logger.info("%s's Team Number: %s", user.first_name, update.message.text)
     await update.message.reply_text(
-        "I see! Thanks for Team Number confirmation! Your Team number is "
+        "Thanks for confirming your Team Number! Your Team number is "
         + str(context.user_data["TEAM_NUMBER"]),
         reply_markup=ReplyKeyboardRemove(),
     )
@@ -113,14 +119,26 @@ async def send_next_clue(
     # if current station exists
     if station < len(clue_matrix[team_number - 1]):
         # Pull out clue for current station
-        clue = clue_matrix[team_number - 1][station]
+        clue = clue_matrix[team_number - 1][station].replace("\\n", "\n")
 
         # If we reach the "break" station, inform user to proceed to gathering area
         # Change state to WAIT_FOR_PART_TWO, so that no input is handled for the duration of the break
         if clue == "BREAK":
             await update.message.reply_text(
-                "BREAK: Please proceed to CENTRAL PARK for a break."
+                "Congratulations! Part 1 is over! \n\nPlease proceed to the assembly point below by 10:15AM for Townhall."
             )
+            await context.bot.send_location(chat_id, 1.264494, 103.803222)
+            logger.info(update.message.from_user.username + " has completed part 1!")
+            return
+
+        if clue.startswith("*photo*"):
+            await context.bot.send_message(
+                chat_id,
+                f"<b>Clue for Station {station + 1}:</b>",
+                parse_mode=constants.ParseMode.HTML,
+            )
+            await context.bot.send_photo(chat_id=chat_id, photo="Clue5.jpeg")
+
             return
 
         # For any normal station, inform user of the next station's clue
@@ -128,14 +146,16 @@ async def send_next_clue(
         # reply_markup = ReplyKeyboardMarkup(custom_keyboard, one_time_keyboard=True)
         await context.bot.send_message(
             chat_id,
-            f"Clue for Station {station + 1}: {clue}",
-            # reply_markup=reply_markup,
+            f"<b>Clue for Station {station + 1}:</b> \n\n{clue}",
+            parse_mode=constants.ParseMode.HTML,
         )
+
     else:
         # If no more stations are left, inform them that they are complete!
         await update.message.reply_text(
             "You have completed all the stations!", reply_markup=ReplyKeyboardRemove()
         )
+        logger.info(update.message.from_user.username + " has completed the game!")
 
 
 async def confirm_completion(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -147,11 +167,13 @@ async def confirm_completion(update: Update, context: ContextTypes.DEFAULT_TYPE)
     completion_code = user_data["COMPLETION_CODE"]
 
     logger.info(
-        "User attempted to confirm completion for their "
+        "User "
+        + update.message.from_user.username
+        + " attempted to confirm completion for their "
         + str(station)
-        + "th station which has code: "
+        + "th station (code: "
         + completion_code
-        + " with their input: "
+        + ") with their input: "
         + update.message.text
     )
 
@@ -166,13 +188,21 @@ async def confirm_completion(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if station == len(clue_matrix[team_number - 1]) - 1:
         await update.message.reply_text(
-            "You have completed all the stations!", reply_markup=ReplyKeyboardRemove()
+            "Congratulations! You have completed all the stations! Please make your way back to Labrador Park MRT Station for the closing address.",
+            reply_markup=ReplyKeyboardRemove(),
         )
+        logger.info(update.message.from_user.username + " has completed the game!")
         return ConversationHandler.END
 
     user_data["STATION_COUNT"] += 1
     user_data["COMPLETION_CODE"] = completion_code_matrix[team_number - 1][station + 1]
     await send_next_clue(update, context)
+
+    logger.info(
+        update.message.from_user.username
+        + " has completed station number "
+        + str(station)
+    )
     return NEXT_CLUE
 
 
@@ -186,11 +216,11 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     await context.bot.send_message(
         chat_id,
-        "Contact CPL Venu at @VenusWithoutTheS. Please inform him of the following: \n\n Team Number: "
+        "Contact CFC Venu at @VenusWithoutTheS. Please inform him of the following: \n\nTeam Number: "
         + str(team_number)
-        + "\n Current Station: "
+        + "\nCurrent Station: "
         + str(station)
-        + "\n Current Clue: "
+        + "\nCurrent Clue: "
         + str(clue_matrix[team_number - 1][station]),
     )
 
@@ -205,13 +235,15 @@ async def handle_wait(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     # During wait, if Part Two has not been initiated, inform user about Break,
     # Else, resume them into the game, and update the state to reflect this.
     if clue_matrix[team_number - 1][station] == "BREAK":
-        logger.info("User informed they are on break.")
+        logger.info(update.message.from_user.username + " informed they are on break.")
         await update.message.reply_text(
-            "You are currently on a break. Please wait until the break is over."
+            "Please wait until the Townhall/Refreshments segment is over."
         )
         return WAIT_FOR_PART_TWO
     else:
-        logger.info("User resumed from break.")
+        logger.info(
+            "User " + update.message.from_user.username + " resumed from break."
+        )
         # TODO: Fix spaghetti.
         await confirm_completion(update, context)
         return NEXT_CLUE
@@ -221,12 +253,12 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancels and ends the conversation."""
     # If user types "/cancel" remove from game.
     user = update.message.from_user
-    logger.info("User %s canceled the conversation.", user.first_name)
+    logger.info("User %s canceled the conversation.", user.username)
 
     context.user_data.clear()
 
     await update.message.reply_text(
-        'Aww, sad to see you leave. Type "start" to restablish connection!',
+        'Aww, sad to see you leave. Type "/start" to restablish connection!',
         reply_markup=ReplyKeyboardRemove(),
     )
 
@@ -254,7 +286,7 @@ async def resume_part_two(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 logger.info("Part Two Launch Successful.")
                 await context.bot.send_message(
                     chat_id=chat_id,
-                    text="Part Two is starting now! Here is your next clue:",
+                    text="Hope you enjoyed Townhall and the food! \n\nPart Two is starting now! Here is your next clue:",
                 )
                 await send_next_clue(update, context, chat_id=chat_id)
         context.bot_data["PART_TWO_BEGIN"] = True
@@ -262,7 +294,7 @@ async def resume_part_two(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     else:
         await update.message.reply_text(
-            "You are not authorized to perform this action."
+            "Nice try. You are not authorized to perform this action."
         )
 
 
@@ -279,13 +311,13 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             logger.info("Admin Reset Successful.")
             await context.bot.send_message(
                 chat_id=chat_id,
-                text="ADMIN HAS RESET THE GAME!",
+                text="ADMIN MESAGE: Game has been reset.",
             )
             await send_next_clue(update, context, chat_id=chat_id)
         await update.message.reply_text("Game has been reset for all teams.")
     else:
         await update.message.reply_text(
-            "You are not authorized to perform this action."
+            "Nice try. You are not authorized to perform this action."
         )
 
 
@@ -296,19 +328,19 @@ async def admin_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         message = " ".join(context.args)
         logger.info("Admin sending message: " + message)
         for chat_id, user_data in context.application.user_data.items():
-            await context.bot.send_message(chat_id=chat_id, text=message)
+            await context.bot.send_message(
+                chat_id=chat_id, text="ADMIN MESSAGE:" + message
+            )
 
         await update.message.reply_text("Message sent to all teams.")
     else:
         await update.message.reply_text(
-            "You are not authorized to perform this action."
+            "Nice try. You are not authorized to perform this action."
         )
 
 
 if __name__ == "__main__":
     application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-    logger.info("DEPLOY WORKED!")
-
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
