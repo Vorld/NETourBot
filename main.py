@@ -50,13 +50,28 @@ completion_code_matrix = [
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    chat_id = update.message.chat_id
+
     custom_keyboard = [["1", "2", "3", "4"], ["5", "6", "7", "8"]]
     reply_markup = ReplyKeyboardMarkup(
         custom_keyboard, one_time_keyboard=True, input_field_placeholder="Team Number?"
     )
 
+    await context.bot.send_message(
+        chat_id,
+        f"Welcome to the Labrador Park NE Tour organised by the CLAW Team! \
+            \n\nThis Telegram bot will be guiding you and your team along your journey today.\
+            \n\nI will be giving clues that lead to stations around Labrador Park. Find the map below! \
+            \n\nAfter completing each station, you will receive a code from your station master. \
+                Entering the code will give you the clue to the next station!\
+                    \n\nFeel free to use /help if you get stuck!\
+                    \n\nHave fun!",
+    )
+
+    await context.bot.send_photo(chat_id=chat_id, photo="LabradorParkMap.jpg")
+
     await update.message.reply_text(
-        text="Hi! Please indicate your team number below!",
+        text="Please indicate your team number below!",
         reply_markup=reply_markup,
     )
 
@@ -125,7 +140,7 @@ async def send_next_clue(
         # Change state to WAIT_FOR_PART_TWO, so that no input is handled for the duration of the break
         if clue == "BREAK":
             await update.message.reply_text(
-                "Congratulations! Part 1 is over! \n\nPlease proceed to the assembly point below by 10:15AM for Townhall."
+                "Part 1 is over! \n\nPlease proceed to the assembly point below by 10:15AM for Townhall."
             )
             await context.bot.send_location(chat_id, 1.264494, 103.803222)
             logger.info(update.message.from_user.username + " has completed part 1!")
@@ -134,7 +149,7 @@ async def send_next_clue(
         if clue.startswith("*photo*"):
             await context.bot.send_message(
                 chat_id,
-                f"<b>Clue for Station {station + 1}:</b>",
+                f"<b>Clue for Station {(station+1) if station<=4 else station}:</b>",
                 parse_mode=constants.ParseMode.HTML,
             )
             await context.bot.send_photo(chat_id=chat_id, photo="Clue5.jpeg")
@@ -146,7 +161,7 @@ async def send_next_clue(
         # reply_markup = ReplyKeyboardMarkup(custom_keyboard, one_time_keyboard=True)
         await context.bot.send_message(
             chat_id,
-            f"<b>Clue for Station {station + 1}:</b> \n\n{clue}",
+            f"<b>Clue for Station {(station+1) if station<=4 else station}:</b> \n\n{clue}",
             parse_mode=constants.ParseMode.HTML,
         )
 
@@ -225,6 +240,19 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
 
 
+async def map(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    chat_id = update.message.chat_id
+
+    logger.info(update.message.from_user.username + " is requesting for the map!")
+
+    await context.bot.send_message(
+        chat_id,
+        "Map of Labrador Park",
+    )
+
+    await context.bot.send_photo(chat_id=chat_id, photo="LabradorParkMap.jpg")
+
+
 # Reject input and reminder user they are on break.
 async def handle_wait(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
@@ -258,11 +286,38 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
 
     await update.message.reply_text(
-        'Aww, sad to see you leave. Type "/start" to restablish connection!',
+        'Aww, sad to see you leave. Type "/start" to re-establish connection!',
         reply_markup=ReplyKeyboardRemove(),
     )
 
     return ConversationHandler.END
+
+
+async def force_townhall(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # Only handle command if invoked by ADMIN
+    if update.message.chat_id == ADMIN_ID:
+
+        for chat_id, user_data in context.application.user_data.items():
+            if chat_id and user_data:
+                user_data["STATION_COUNT"] = clue_matrix[
+                    user_data["TEAM_NUMBER"] - 1
+                ].index("BREAK")
+
+                user_data["COMPLETION_CODE"] = completion_code_matrix[
+                    user_data["TEAM_NUMBER"] - 1
+                ][completion_code_matrix[user_data["TEAM_NUMBER"] - 1].index("BREAK")]
+            logger.info("Townhall forced.")
+
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text="Due to time constraints, Part One will cease and Townhall will begin shortly.",
+            )
+            await send_next_clue(update, context, chat_id=chat_id)
+
+    else:
+        await update.message.reply_text(
+            "Nice try. You are not authorized to perform this action."
+        )
 
 
 async def resume_part_two(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -354,7 +409,9 @@ if __name__ == "__main__":
 
     application.add_handler(conv_handler)
     application.add_handler(CommandHandler("help", help))
+    application.add_handler(CommandHandler("map", map))
     application.add_handler(CommandHandler("resume", resume_part_two))
+    application.add_handler(CommandHandler("forcer_townhall", force_townhall))
     application.add_handler(CommandHandler("reset", reset))
     application.add_handler(
         CommandHandler("admin_message", admin_message, has_args=True)
@@ -367,5 +424,3 @@ if __name__ == "__main__":
 # 1. resuming part two works
 # 2. cancelling does not result in funny glitches when resuming
 # 3. regex is properly implemented across the programme.
-
-# TODO: Photo clue
