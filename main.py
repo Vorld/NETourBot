@@ -411,7 +411,7 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("help", help))
     application.add_handler(CommandHandler("map", map))
     application.add_handler(CommandHandler("resume", resume_part_two))
-    application.add_handler(CommandHandler("forcer_townhall", force_townhall))
+    application.add_handler(CommandHandler("force_townhall", force_townhall))
     application.add_handler(CommandHandler("reset", reset))
     application.add_handler(
         CommandHandler("admin_message", admin_message, has_args=True)
