@@ -310,7 +310,7 @@ async def force_townhall(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
             await context.bot.send_message(
                 chat_id=chat_id,
-                text="Due to time constraints, Part One will cease and Townhall will begin shortly.",
+                text="Due to time constraints, Part 1 will cease and Townhall will begin shortly.",
             )
             await send_next_clue(update, context, chat_id=chat_id)
 
