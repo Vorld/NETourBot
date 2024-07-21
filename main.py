@@ -412,7 +412,7 @@ async def admin_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         logger.info("Admin sending message: " + message)
         for chat_id, user_data in context.application.user_data.items():
             await context.bot.send_message(
-                chat_id=chat_id, text="ADMIN MESSAGE:" + message
+                chat_id=chat_id, text="ADMIN MESSAGE: " + message
             )
 
         await update.message.reply_text("Message sent to all teams.")
