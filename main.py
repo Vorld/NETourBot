@@ -139,21 +139,14 @@ async def send_next_clue(
         # If we reach the "break" station, inform user to proceed to gathering area
         # Change state to WAIT_FOR_PART_TWO, so that no input is handled for the duration of the break
         if clue == "BREAK":
-            await update.message.reply_text(
-                "Part 1 is over! \n\nPlease proceed to the assembly point below by 10:15AM for Townhall."
-            )
-            await context.bot.send_location(chat_id, 1.264494, 103.803222)
-            logger.info(update.message.from_user.username + " has completed part 1!")
-            return
-
-        if clue.startswith("*photo*"):
             await context.bot.send_message(
                 chat_id,
-                f"<b>Clue for Station {(station+1) if station<=4 else station}:</b>",
-                parse_mode=constants.ParseMode.HTML,
+                "Part 1 is over! \n\nPlease proceed to the assembly point below by 10:15AM for Townhall.",
             )
-            await context.bot.send_photo(chat_id=chat_id, photo="Clue5.jpeg")
-
+            await context.bot.send_location(chat_id, 1.264494, 103.803222)
+            logger.info(
+                str(update.message.from_user.username) + " has completed part 1!"
+            )
             return
 
         # For any normal station, inform user of the next station's clue
@@ -167,13 +160,22 @@ async def send_next_clue(
 
     else:
         # If no more stations are left, inform them that they are complete!
-        await update.message.reply_text(
-            "You have completed all the stations!", reply_markup=ReplyKeyboardRemove()
+        await context.bot.send_message(
+            chat_id,
+            "Please make your way back to the point on the map below for the closing address.",
         )
-        logger.info(update.message.from_user.username + " has completed the game!")
+
+        await context.bot.send_location(chat_id, 1.2637096977222826, 103.80381112878558)
+        logger.info(str(update.message.from_user.username) + " has completed the game!")
 
 
-async def confirm_completion(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def confirm_completion(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int = None
+) -> int:
+    # If no chat_id is specified, assumes that message is intended for current chat
+    if chat_id is None:
+        chat_id = update.message.chat_id
+
     # When user informs bot that they have COMPLETED! station, update their station,
     # and state to proceed with next clue
     user_data = context.user_data
@@ -183,16 +185,25 @@ async def confirm_completion(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     logger.info(
         "User "
-        + update.message.from_user.username
+        + str(update.message.from_user.username)
         + " attempted to confirm completion for their "
         + str(station)
         + "th station (code: "
-        + completion_code
+        + str(completion_code)
         + ") with their input: "
-        + update.message.text
+        + str(update.message.text)
     )
 
-    # Handle BREAK station
+    if station >= len(clue_matrix[team_number - 1]) - 1:
+        await update.message.reply_text(
+            "Congratulations! You have completed all the stations! Please make your way back to the point on the map below for the closing address.",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        await context.bot.send_location(chat_id, 1.2637096977222826, 103.80381112878558)
+        logger.info(str(update.message.from_user.username) + " has completed the game!")
+        return ConversationHandler.END
+
+        # Handle BREAK station
     if clue_matrix[team_number - 1][station] == "BREAK":
         await handle_wait(update, context)
         return WAIT_FOR_PART_TWO
@@ -201,20 +212,12 @@ async def confirm_completion(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("Incorrect Completion Code!")
         return NEXT_CLUE
 
-    if station == len(clue_matrix[team_number - 1]) - 1:
-        await update.message.reply_text(
-            "Congratulations! You have completed all the stations! Please make your way back to Labrador Park MRT Station for the closing address.",
-            reply_markup=ReplyKeyboardRemove(),
-        )
-        logger.info(update.message.from_user.username + " has completed the game!")
-        return ConversationHandler.END
-
     user_data["STATION_COUNT"] += 1
     user_data["COMPLETION_CODE"] = completion_code_matrix[team_number - 1][station + 1]
     await send_next_clue(update, context)
 
     logger.info(
-        update.message.from_user.username
+        str(update.message.from_user.username)
         + " has completed station number "
         + str(station)
     )
@@ -227,7 +230,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     station = user_data["STATION_COUNT"]
     chat_id = update.message.chat_id
 
-    logger.info(update.message.from_user.username + " is requesting for help!")
+    logger.info(str(update.message.from_user.username) + " is requesting for help!")
 
     await context.bot.send_message(
         chat_id,
@@ -243,8 +246,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def map(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     chat_id = update.message.chat_id
 
-    logger.info(update.message.from_user.username + " is requesting for the map!")
-
+    logger.info(str(update.message.from_user.username))
     await context.bot.send_message(
         chat_id,
         "Map of Labrador Park",
@@ -263,14 +265,16 @@ async def handle_wait(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     # During wait, if Part Two has not been initiated, inform user about Break,
     # Else, resume them into the game, and update the state to reflect this.
     if clue_matrix[team_number - 1][station] == "BREAK":
-        logger.info(update.message.from_user.username + " informed they are on break.")
+        logger.info(
+            str(update.message.from_user.username) + " informed they are on break."
+        )
         await update.message.reply_text(
             "Please wait until the Townhall/Refreshments segment is over."
         )
         return WAIT_FOR_PART_TWO
     else:
         logger.info(
-            "User " + update.message.from_user.username + " resumed from break."
+            "User " + str(update.message.from_user.username) + " resumed from break."
         )
         # TODO: Fix spaghetti.
         await confirm_completion(update, context)
@@ -281,7 +285,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancels and ends the conversation."""
     # If user types "/cancel" remove from game.
     user = update.message.from_user
-    logger.info("User %s canceled the conversation.", user.username)
+    logger.info("User %s canceled the conversation.", str(user.username))
 
     context.user_data.clear()
 
@@ -311,6 +315,30 @@ async def force_townhall(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await context.bot.send_message(
                 chat_id=chat_id,
                 text="Due to time constraints, Part 1 will cease and Townhall will begin shortly.",
+            )
+            await send_next_clue(update, context, chat_id=chat_id)
+
+    else:
+        await update.message.reply_text(
+            "Nice try. You are not authorized to perform this action."
+        )
+
+
+async def force_end(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # Only handle command if invoked by ADMIN
+    if update.message.chat_id == ADMIN_ID:
+        for chat_id, user_data in context.application.user_data.items():
+            if chat_id and user_data:
+                user_data["STATION_COUNT"] = 9
+
+                user_data["COMPLETION_CODE"] = completion_code_matrix[
+                    user_data["TEAM_NUMBER"] - 1
+                ][8]
+            logger.info("End forced.")
+
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text="Due to time constraints, Part 2 will cease now.",
             )
             await send_next_clue(update, context, chat_id=chat_id)
 
@@ -412,6 +440,7 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("map", map))
     application.add_handler(CommandHandler("resume", resume_part_two))
     application.add_handler(CommandHandler("force_townhall", force_townhall))
+    application.add_handler(CommandHandler("force_end", force_end))
     application.add_handler(CommandHandler("reset", reset))
     application.add_handler(
         CommandHandler("admin_message", admin_message, has_args=True)
@@ -424,3 +453,5 @@ if __name__ == "__main__":
 # 1. resuming part two works
 # 2. cancelling does not result in funny glitches when resuming
 # 3. regex is properly implemented across the programme.
+# 4. forcing townhall and forcing end should work!
+# 5. Users joining after key check points like townhall and during the breaks, should not face issues
