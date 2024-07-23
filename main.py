@@ -157,15 +157,16 @@ async def send_next_clue(
             f"<b>Clue for Station {(station+1) if station<=4 else station}:</b> \n\n{clue}",
             parse_mode=constants.ParseMode.HTML,
         )
+        await context.bot.send_photo(chat_id=chat_id, photo="LabradorParkMap.jpg")
 
     else:
         # If no more stations are left, inform them that they are complete!
         await context.bot.send_message(
             chat_id,
-            "Please make your way back to the point on the map below for the closing address.",
+            "Please make your way back to the Townhall point on the map below for the closing address.",
         )
 
-        await context.bot.send_location(chat_id, 1.2637096977222826, 103.80381112878558)
+        await context.bot.send_location(chat_id, 1.264494, 103.803222)
         logger.info(str(update.message.from_user.username) + " has completed the game!")
 
 
@@ -196,10 +197,10 @@ async def confirm_completion(
 
     if station >= len(clue_matrix[team_number - 1]) - 1:
         await update.message.reply_text(
-            "Congratulations! You have completed all the stations! Please make your way back to the point on the map below for the closing address.",
+            "Congratulations! You have completed all the stations! Please make your way back to the Townhall point on the map below for the closing address.",
             reply_markup=ReplyKeyboardRemove(),
         )
-        await context.bot.send_location(chat_id, 1.2637096977222826, 103.80381112878558)
+        await context.bot.send_location(chat_id, 1.264494, 103.803222)
         logger.info(str(update.message.from_user.username) + " has completed the game!")
         return ConversationHandler.END
 
