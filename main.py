@@ -61,7 +61,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         chat_id,
         f"Welcome to the Labrador Park NE Tour organised by the CLAW Team! \
             \n\nThis Telegram bot will be guiding you and your team along your journey today.\
-            \n\nI will be giving clues that lead to stations around Labrador Park. Find the map below! \
+            \n\nThis tour is split into two halves: four teams exploring the the coastal stations and the other four exploring the forest stations. Following Townhall, teams will swap to the other half.\
+            \n\nI will be giving clues that lead to stations around Labrador Park. Find the full map below! A cropped map will be provided with each clue. \
             \n\nAfter completing each station, you will receive a code from your station master. \
                 Entering the code will give you the clue to the next station!\
                     \n\nFeel free to use /help if you get stuck!\
@@ -157,7 +158,7 @@ async def send_next_clue(
             f"<b>Clue for Station {(station+1) if station<=4 else station}:</b> \n\n{clue}",
             parse_mode=constants.ParseMode.HTML,
         )
-        await context.bot.send_photo(chat_id=chat_id, photo="LabradorParkMap.jpg")
+        await context.bot.send_photo(chat_id=chat_id, photo="LabradorParkMapCrop.jpg")
 
     else:
         # If no more stations are left, inform them that they are complete!
