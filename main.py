@@ -52,6 +52,11 @@ completion_code_matrix = [
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     chat_id = update.message.chat_id
 
+    # Set variables on start.
+    user_data = context.user_data
+    user_data["TEAM_NUMBER"] = 1
+    user_data["COMPLETION_CODE"] = completion_code_matrix[1][0]
+
     custom_keyboard = [["1", "2", "3", "4"], ["5", "6", "7", "8"]]
     reply_markup = ReplyKeyboardMarkup(
         custom_keyboard, one_time_keyboard=True, input_field_placeholder="Team Number?"
