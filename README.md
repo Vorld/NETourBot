@@ -5,4 +5,6 @@ We faced several challenges:
 2. Our play area was really big, making it difficult to communicate with each team separately
 3. We had over 200 people to manage
 
-I made this spaghetti Telegram bot to solve all these challenges with one solution. Yay.
+I made this spaghetti Telegram bot to solve all these challenges with one solution. I ended up learning how to make Telegram bots, use AWS to host python services, and set-up basic CI/CD for deployment in an EC2. 
+
+yay.
